@@ -16,7 +16,8 @@ app.post('/createFile', async (req, res) => {
   if (!fileName) {
     return res.json({
       status: false,
-      message: 'File name is required.'
+      message: 'File name is required. Please ensure that you are sending the "name" parameter in the request body. This parameter should specify the desired file name.',
+      solution: 'To fix this issue: \n1. Verify the structure of your request body. Ensure it contains a "name" key.\n2. Use tools like Postman or cURL to test your API request. \n3. Check your client-side application code if you are making this request programmatically.'
     });
   }
 
@@ -43,9 +44,36 @@ app.post('/createFile', async (req, res) => {
       dev_telegram: "https://t.me/LeoxJava"
     });
   } catch (error) {
+    let detailedMessage = 'An unexpected error occurred.';
+    let solution = 'Please review your request and try the following steps:';
+
+    if (error.response) {
+      detailedMessage = error.response.data.message || detailedMessage;
+
+      if (error.response.status === 401) {
+        solution += '\n1. Ensure your GitHub token is valid and has the necessary permissions (repo scope).';
+      } else if (error.response.status === 404) {
+        solution += '\n1. Verify the repository and file path exist.';
+        solution += '\n2. Check if the branch you specified is correct (e.g., "main").';
+      } else if (error.response.status === 422) {
+        solution += '\n1. Make sure the file does not already exist. GitHub API cannot overwrite existing files without additional handling.';
+      } else {
+        solution += '\n1. Check GitHub API documentation for error details.';
+      }
+    } else if (error.request) {
+      detailedMessage = 'Network error occurred while communicating with GitHub.';
+      solution += '\n1. Check your internet connection.';
+      solution += '\n2. Retry the operation after ensuring connectivity.';
+      solution += '\n3. If the problem persists, check GitHub service status at https://www.githubstatus.com.';
+    } else {
+      detailedMessage = error.message;
+      solution += '\n1. Debug your server-side application for unexpected issues.';
+    }
+
     res.json({
       status: false,
-      message: error.response?.data?.message || 'An error occurred.'
+      message: detailedMessage,
+      solution: solution
     });
   }
 });
